@@ -1,0 +1,29 @@
+import MDAnalysis as mda
+from MDAnalysis.lib.distances import distance_array
+import numpy as np
+
+#copy path to pdb
+u = topology = '.../.../../input.pdb'
+#copy path to trajectory
+trajectory = '.../.../../input.dcd'
+u = mda.Universe(topology,trajectory)
+
+#select atoms to represent upper and lower regions of the pore
+region1= u.select_atoms("segid PROA and resid 200 or segid PROB and resid 205 or segid PROC and resid 210 or segid PROD and resid 215 or segid PROE and resid 220")
+region2= u.select_atoms("segid PROA and resid 212 or segid PROB and resid 217 or segid PROC and resid 222 or segid PROD and resid 227 or segid PROE and resid 232")
+
+water_oxygens= u.select_atoms("resname WAT")
+cutoff = 5.0
+frame_results = []
+
+for ts in u.trajectory:
+    com1= region1.center_of_mass()
+    com2= region2.center_of_mass()
+    midpoint = (com1 + com2)/ 2
+    distances = np.linalg.norm(water_oxygens.positions - midpoint, axis=1)
+    num_waters = (distances < cutoff).sum()
+    frame_results.append((ts.frame, num_waters))
+with open("water_count_per_frame.txt", "w") as f:
+    for frame, count in frame_results:
+        f.write(f"Frame {frame}: {count} water molecules\n")
+print("Completed analyses")
